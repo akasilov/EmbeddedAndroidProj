@@ -6,7 +6,7 @@
  *          on the FireFly-BFH-Cape.
  *          Show the current Ambient Light in Lux on the display.
  *	        Only a minimal error handling is implemented.
- * \file    MainActivityI2C.java
+ * \file    MainActivity.java
  * \version 1.0
  * \date    06.03.2014
  * \author  Martin Aebersold
@@ -31,14 +31,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-package ch.bfh.ti.i2c;
+package ch.bfh.ti.main;
 
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
-public class MainActivityI2C extends AppCompatActivity {
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+
+import ch.bfh.ti.i2c.I2C;
+import ch.bfh.ti.proj.R;
+import ch.bfh.ti.mqtt.MqttHelper;
+
+public class MainActivity extends AppCompatActivity {
 
     /* MAX44009 Register pointers */
     private static final char MAX44009_CONFIG = 0x02;    /* Sensor Configuration Register */
@@ -48,6 +58,8 @@ public class MainActivityI2C extends AppCompatActivity {
 
     /* I2C device file name */
     private static final String MAX44009_FILE_NAME = "/dev/i2c-4";
+
+    private MqttHelper mqttHelper;
 
     /* I2C object variable */
     I2C i2c;
@@ -63,6 +75,7 @@ public class MainActivityI2C extends AppCompatActivity {
 
     /* Variable for TextView widgets */
     TextView textViewAmbientLight;
+    TextView dataReceived;
 
     /* Temperature Degrees Celsius text symbol */
     private static final String DEGREE_SYMBOL = "\u2103";
@@ -76,7 +89,9 @@ public class MainActivityI2C extends AppCompatActivity {
         getWindow().getDecorView().setBackgroundColor(Color.BLACK);
 
         textViewAmbientLight = (TextView) findViewById(R.id.textViewAmbientLight);
+        dataReceived = (TextView) findViewById(R.id.dataReceived);
 
+        startMqtt();
 	    /* Instantiate the new i2c device */
         i2c = new I2C();
 
@@ -107,6 +122,7 @@ public class MainActivityI2C extends AppCompatActivity {
 
         /* Display actual ambient light value in lux */
         textViewAmbientLight.setTextColor(Color.WHITE);
+        dataReceived.setTextColor(Color.WHITE);
         textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
 
 	    /* Close the i2c file */
@@ -122,5 +138,33 @@ public class MainActivityI2C extends AppCompatActivity {
         android.os.Process.killProcess(android.os.Process.myPid());
         finish();
         super.onStop();
+    }
+
+    private void startMqtt(){
+        mqttHelper = new MqttHelper(getApplicationContext());
+        mqttHelper.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean b, String s) {
+                Log.w("Mqtt","Connection complete");
+
+            }
+
+            @Override
+            public void connectionLost(Throwable throwable) {
+                Log.w("Mqtt","Connection lost");
+
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+                Log.w("Mqtt",mqttMessage.toString());
+                dataReceived.setText(mqttMessage.toString());
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+            }
+        });
     }
 }
