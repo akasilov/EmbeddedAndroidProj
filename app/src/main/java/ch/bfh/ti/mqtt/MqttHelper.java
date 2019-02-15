@@ -20,7 +20,7 @@ public class MqttHelper {
     final String serverUri = "tcp://m24.cloudmqtt.com:17990";
 
     final String clientId = "ExampleAndroidClient";
-    final String subscriptionTopic = "sensor/temp";
+    final String subscriptionTopic = "firefly/leds/+";
 
     final String username = "bhsssobh";
     final String password = "WJg22UK3NLDQ";
@@ -98,12 +98,12 @@ public class MqttHelper {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     Log.w("Mqtt","Subscribed!");
-                    try {
-                        sendMessage("Hello");
-                    } catch (MqttException ex) {
-                        System.err.println("Exception whilst publishing");
-                        ex.printStackTrace();
-                    }
+//                    try {
+//                        sendMessage("true");
+//                    } catch (MqttException ex) {
+//                        System.err.println("Exception whilst publishing");
+//                        ex.printStackTrace();
+//                    }
                 }
 
                 @Override

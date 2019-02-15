@@ -33,6 +33,7 @@
  */
 package ch.bfh.ti.main;
 
+
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
@@ -47,6 +48,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import ch.bfh.ti.i2c.I2C;
 import ch.bfh.ti.proj.R;
 import ch.bfh.ti.mqtt.MqttHelper;
+import ch.bfh.ti.gpio.SysfsFileGPIO;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -59,14 +61,21 @@ public class MainActivity extends AppCompatActivity {
     /* I2C device file name */
     private static final String MAX44009_FILE_NAME = "/dev/i2c-4";
 
+    private static final String MQTT_TOPIC_LEDS ="firefly/leds/led";
+
+    private static final String[] ledIds = {SysfsFileGPIO.LED_L1, SysfsFileGPIO.LED_L2,
+                                            SysfsFileGPIO.LED_L3, SysfsFileGPIO.LED_L4};
+
     private MqttHelper mqttHelper;
 
     /* I2C object variable */
-    I2C i2c;
+    private final I2C i2c = new I2C();
+
+    private final SysfsFileGPIO gpio = new SysfsFileGPIO();
 
     /* I2C Communication buffer and file handle */
-    int[] i2cCommBuffer = new int[16];
-    int fileHandle;
+    private int[] i2cCommBuffer = new int[16];
+    private int fileHandle;
 
     /* Light and conversion variable */
     static int exponent;
@@ -91,9 +100,14 @@ public class MainActivity extends AppCompatActivity {
         textViewAmbientLight = (TextView) findViewById(R.id.textViewAmbientLight);
         dataReceived = (TextView) findViewById(R.id.dataReceived);
 
+        for (String ledId : ledIds) {
+            gpio.unexport(ledId);
+            gpio.export(ledId);
+            gpio.set_direction_out(ledId);
+        }
+
         startMqtt();
 	    /* Instantiate the new i2c device */
-        i2c = new I2C();
 
 	    /* Open the i2c device, get the file handle */
         fileHandle = i2c.open(MAX44009_FILE_NAME);
@@ -157,8 +171,19 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-                Log.w("Mqtt",mqttMessage.toString());
-                dataReceived.setText(mqttMessage.toString());
+                String text = topic + "=" + mqttMessage.toString();
+
+                if (topic.startsWith(MQTT_TOPIC_LEDS)) {
+                    int ledId = Character.getNumericValue(topic.charAt(MQTT_TOPIC_LEDS.length()));
+                    --ledId;
+                    if (mqttMessage.toString().length() == 1 && ledId >= 0 && ledId < ledIds.length) {
+                        char value = mqttMessage.toString().charAt(0);
+                        Log.d("Mqtt", "Changing the LED" + String.valueOf(ledId));
+                        gpio.write_value(ledIds[ledId], value);
+                    }
+                }
+
+                dataReceived.setText(text);
             }
 
             @Override
