@@ -36,6 +36,8 @@ package ch.bfh.ti.main;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -43,7 +45,10 @@ import android.widget.TextView;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+
+import java.lang.ref.WeakReference;
 
 import ch.bfh.ti.i2c.I2C;
 import ch.bfh.ti.proj.R;
@@ -62,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String MAX44009_FILE_NAME = "/dev/i2c-4";
 
     private static final String MQTT_TOPIC_LEDS ="firefly/leds/led";
+    private static final String MQTT_TOPIC_LUMINANCE ="firefly/sensors/lux";
 
     private static final String[] ledIds = {SysfsFileGPIO.LED_L1, SysfsFileGPIO.LED_L2,
                                             SysfsFileGPIO.LED_L3, SysfsFileGPIO.LED_L4};
@@ -73,18 +79,67 @@ public class MainActivity extends AppCompatActivity {
 
     private final SysfsFileGPIO gpio = new SysfsFileGPIO();
 
-    /* I2C Communication buffer and file handle */
-    private int[] i2cCommBuffer = new int[16];
-    private int fileHandle;
+    private boolean mStopUpdateThread = false;
 
-    /* Light and conversion variable */
-    static int exponent;
-    static int mantissa;
-    static double luminance;
+    /* Updare every second */
+    private int mUpdateInterval = 1000;
 
     /* Variable for TextView widgets */
     TextView textViewAmbientLight;
     TextView dataReceived;
+
+    private Thread mLuminanceValueUpdaterThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            while(!mStopUpdateThread) {
+                double luminance = getLuminanceValue();
+                Message message = new Message();
+                Bundle b = new Bundle();
+                b.putDouble("luminance", luminance);
+                message.setData(b);
+                mSensorHandler.sendMessage(message);
+                try{
+                    Thread.sleep(mUpdateInterval);
+                }
+                catch (InterruptedException ex){
+                    ex.printStackTrace();
+                }
+            }
+        }
+    });
+
+    /**
+     * Instances of static inner classes do not hold an implicit
+     * reference to their outer class.
+     */
+    private class SensorDataHandler extends Handler {
+        private final WeakReference<MainActivity> mActivity;
+
+        public SensorDataHandler(MainActivity activity) {
+            mActivity = new WeakReference<MainActivity>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MainActivity activity = mActivity.get();
+            if (activity != null) {
+                super.handleMessage(msg);
+                double luminance = msg.getData().getDouble("luminance");
+                activity.textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
+                if (mqttHelper.isConnected()) {
+                    try {
+                        mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, String.valueOf((int)luminance));
+                    } catch (MqttException ex) {
+                        System.err.println("Exception whilst publishing");
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    private final SensorDataHandler mSensorHandler = new SensorDataHandler(this);
+
 
     /* Temperature Degrees Celsius text symbol */
     private static final String DEGREE_SYMBOL = "\u2103";
@@ -97,8 +152,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main_i2c);
         getWindow().getDecorView().setBackgroundColor(Color.BLACK);
 
-        textViewAmbientLight = (TextView) findViewById(R.id.textViewAmbientLight);
-        dataReceived = (TextView) findViewById(R.id.dataReceived);
+        textViewAmbientLight = findViewById(R.id.textViewAmbientLight);
+        dataReceived = findViewById(R.id.dataReceived);
+        textViewAmbientLight.setTextColor(Color.WHITE);
 
         for (String ledId : ledIds) {
             gpio.unexport(ledId);
@@ -107,51 +163,37 @@ public class MainActivity extends AppCompatActivity {
         }
 
         startMqtt();
-	    /* Instantiate the new i2c device */
 
-	    /* Open the i2c device, get the file handle */
-        fileHandle = i2c.open(MAX44009_FILE_NAME);
-
-	    /* Set the i2c slave address for all subsequent I2C device transfers */
-        i2c.SetSlaveAddress(fileHandle, MAX44009_I2C_ADDR);
-
-        /* Setup i2c buffer for the configuration register an write it to the MAX44009 device */
-        /* Continuous mode, Integration time = 800 ms(0x40)	                                  */
-        i2cCommBuffer[0] = MAX44009_CONFIG;
-        i2cCommBuffer[1] = 0x40;
-        i2c.write(fileHandle, i2cCommBuffer, 2);
-
-	    /* Setup the MAX44009 register to read the ambient light value */
-        i2cCommBuffer[0] = 0x03;
-        i2c.write(fileHandle, i2cCommBuffer, 1);
-
-	    /* Read the current ambient light value from the MAX44009 device */
-        i2c.read(fileHandle, i2cCommBuffer, 2);
-
-        /* Convert the ambient light value to lux, have a look at the datasheet	*/
-        exponent = (i2cCommBuffer[0] & 0xF0) >> 4;
-        mantissa = ((i2cCommBuffer[0] & 0x0F) << 4) | (i2cCommBuffer[1] & 0x0F);
-        luminance = Math.pow(2, exponent) * mantissa * 0.045;
-
-
-        /* Display actual ambient light value in lux */
-        textViewAmbientLight.setTextColor(Color.WHITE);
-        dataReceived.setTextColor(Color.WHITE);
-        textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
-
-	    /* Close the i2c file */
-        i2c.close(fileHandle);
+//        try {
+//            Log.d("Mqtt","Sending a message to topic " + MQTT_TOPIC_LUMINANCE + "=" +  String.valueOf((int)luminance));
+//            int aa = (int)luminance;
+//            //mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, "AAAAA");
+//        } catch (MqttException ex) {
+//            System.err.println("Exception whilst publishing");
+//            ex.printStackTrace();
+//        }
     }
 
-    /*
-     * 	(non-Javadoc)
-     * @see android.app.Activity#onStop()
-     */
-    protected void onStop()
-    {
+    protected void onStop() {
+        stopLuminanceUpdateThread();
+
         android.os.Process.killProcess(android.os.Process.myPid());
         finish();
         super.onStop();
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        stopLuminanceUpdateThread();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        startLuminanceUpdateThread();
     }
 
     private void startMqtt(){
@@ -170,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+            public void messageArrived(String topic, MqttMessage mqttMessage) {
                 String text = topic + "=" + mqttMessage.toString();
 
                 if (topic.startsWith(MQTT_TOPIC_LEDS)) {
@@ -191,5 +233,59 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void startLuminanceUpdateThread() {
+        Log.i("Activity","Start updating the luminance value");
+        mLuminanceValueUpdaterThread.start();
+    }
+
+    void stopLuminanceUpdateThread() {
+        Log.i("Activity","Stop updating the luminance value");
+        mStopUpdateThread = true;
+        mSensorHandler.removeCallbacks(mLuminanceValueUpdaterThread);
+    }
+
+    private double getLuminanceValue() {
+        //Log.i("Activity","Reading the value from the sensor");
+        /* I2C Communication buffer and file handle */
+        int[] i2cCommBuffer = new int[16];
+        int fileHandle;
+
+        /* Light and conversion variable */
+        int exponent;
+        int mantissa;
+        double luminance;
+
+        /* Open the i2c device, get the file handle */
+        fileHandle = i2c.open(MAX44009_FILE_NAME);
+
+        /* Set the i2c slave address for all subsequent I2C device transfers */
+        i2c.SetSlaveAddress(fileHandle, MAX44009_I2C_ADDR);
+
+        /* Setup i2c buffer for the configuration register an write it to the MAX44009 device */
+        /* Continuous mode, Integration time = 800 ms(0x40)	                                  */
+        i2cCommBuffer[0] = MAX44009_CONFIG;
+        i2cCommBuffer[1] = 0x40;
+        i2c.write(fileHandle, i2cCommBuffer, 2);
+
+        /* Setup the MAX44009 register to read the ambient light value */
+        i2cCommBuffer[0] = 0x03;
+        i2c.write(fileHandle, i2cCommBuffer, 1);
+
+        /* Read the current ambient light value from the MAX44009 device */
+        i2c.read(fileHandle, i2cCommBuffer, 2);
+
+        /* Convert the ambient light value to lux, have a look at the datasheet	*/
+        exponent = (i2cCommBuffer[0] & 0xF0) >> 4;
+        mantissa = ((i2cCommBuffer[0] & 0x0F) << 4) | (i2cCommBuffer[1] & 0x0F);
+        luminance = Math.pow(2, exponent) * mantissa * 0.045;
+
+        //Log.i("Activity","Luminance value is " + String.valueOf(luminance));
+
+        /* Close the i2c file */
+        i2c.close(fileHandle);
+
+        return luminance;
     }
 }

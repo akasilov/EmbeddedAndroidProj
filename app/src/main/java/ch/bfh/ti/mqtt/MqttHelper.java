@@ -26,6 +26,7 @@ public class MqttHelper {
     final String password = "WJg22UK3NLDQ";
     final int qos = 1;
 
+    private boolean connected = false;
 
     public MqttHelper(Context context){
         mqttAndroidClient = new MqttAndroidClient(context, serverUri, clientId);
@@ -98,17 +99,13 @@ public class MqttHelper {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     Log.w("Mqtt","Subscribed!");
-//                    try {
-//                        sendMessage("true");
-//                    } catch (MqttException ex) {
-//                        System.err.println("Exception whilst publishing");
-//                        ex.printStackTrace();
-//                    }
+                    connected = true;
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     Log.w("Mqtt", "Subscribed fail!");
+                    connected = false;
                 }
             });
 
@@ -118,9 +115,13 @@ public class MqttHelper {
         }
     }
 
-    public void sendMessage(String payload) throws MqttException {
+    public boolean isConnected() {
+        return connected;
+    }
+
+    public void sendMessage(String topic,  String payload) throws MqttException {
         MqttMessage message = new MqttMessage(payload.getBytes());
         message.setQos(qos);
-        mqttAndroidClient.publish(subscriptionTopic, message); // Blocking publish
+        mqttAndroidClient.publish(topic, message); // Blocking publish
     }
 }
