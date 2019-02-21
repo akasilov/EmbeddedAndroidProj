@@ -34,7 +34,6 @@
 package ch.bfh.ti.main;
 
 
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
@@ -50,10 +49,12 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.lang.ref.WeakReference;
 
+import ch.bfh.ti.gpio.ButtonEventListener;
 import ch.bfh.ti.i2c.I2C;
 import ch.bfh.ti.proj.R;
 import ch.bfh.ti.mqtt.MqttHelper;
 import ch.bfh.ti.gpio.SysfsFileGPIO;
+import ch.bfh.ti.gpio.Buttons;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String MQTT_TOPIC_LEDS ="firefly/leds/led";
     private static final String MQTT_TOPIC_LUMINANCE ="firefly/sensors/lux";
+    private static final String MQTT_TOPIC_BUTTONS ="firefly/buttons/T";
 
     private static final String[] ledIds = {SysfsFileGPIO.LED_L1, SysfsFileGPIO.LED_L2,
                                             SysfsFileGPIO.LED_L3, SysfsFileGPIO.LED_L4};
@@ -81,12 +83,16 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean mStopUpdateThread = false;
 
+    private Buttons mButtons;
+
     /* Updare every second */
-    private int mUpdateInterval = 1000;
+    private int mUpdateInterval = 500;
 
     /* Variable for TextView widgets */
     TextView textViewAmbientLight;
     TextView dataReceived;
+
+    Handler mButtonHandler;
 
     private Thread mLuminanceValueUpdaterThread = new Thread(new Runnable() {
         @Override
@@ -104,6 +110,9 @@ public class MainActivity extends AppCompatActivity {
                 catch (InterruptedException ex){
                     ex.printStackTrace();
                 }
+
+                //mButtons.debug();
+
             }
         }
     });
@@ -129,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
                 if (mqttHelper.isConnected()) {
                     try {
                         mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, String.valueOf((int)luminance));
+                        //Log.i("MQTT handle Message Thread:",Thread.currentThread().getName());
                     } catch (MqttException ex) {
                         System.err.println("Exception whilst publishing");
                         ex.printStackTrace();
@@ -155,12 +165,54 @@ public class MainActivity extends AppCompatActivity {
         textViewAmbientLight = findViewById(R.id.textViewAmbientLight);
         dataReceived = findViewById(R.id.dataReceived);
         textViewAmbientLight.setTextColor(Color.WHITE);
+        dataReceived.setTextColor(Color.WHITE);
 
         for (String ledId : ledIds) {
             gpio.unexport(ledId);
             gpio.export(ledId);
             gpio.set_direction_out(ledId);
         }
+
+
+        mButtonHandler = new Handler();
+        mButtons = new Buttons(gpio);
+        mButtons.addButtonEventListener(new ButtonEventListener() {
+            @Override
+            public void onButtonPressed(Buttons object, final int buttonNumber) {
+                mButtonHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mqttHelper.isConnected()) {
+                            try {
+                                mqttHelper.sendMessage(MQTT_TOPIC_BUTTONS + String.valueOf(buttonNumber+1), "1");
+                            } catch (MqttException ex) {
+                                System.err.println("Exception whilst publishing");
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onButtonReleased(Buttons object, final int buttonNumber) {
+                mButtonHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mqttHelper.isConnected()) {
+                            try {
+                                mqttHelper.sendMessage(MQTT_TOPIC_BUTTONS + String.valueOf(buttonNumber+1), "0");
+                            } catch (MqttException ex) {
+                                System.err.println("Exception whilst publishing");
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        Log.i("Thread onCreate:",Thread.currentThread().getName());
 
         startMqtt();
 
