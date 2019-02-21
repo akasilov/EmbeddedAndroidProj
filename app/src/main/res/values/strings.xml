@@ -1,3 +1,14 @@
 <resources>
-    <string name="app_name">Embedded Android Project</string>
+    <string name="app_name">firefly Web Control</string>
+    <string name="leds_string">LEDs</string>
+    <string name="luminance_string">Luminance</string>
+    <string name="buttons_string">Buttons</string>
+    <string name="radiobutton_led1_string">LED1</string>
+    <string name="radiobutton_led2_string">LED2</string>
+    <string name="radiobutton_led3_string">LED3</string>
+    <string name="radiobutton_led4_string">LED4</string>
+    <string name="t1_text">T1</string>
+    <string name="t2_text">T2</string>
+    <string name="t3_text">T3</string>
+    <string name="t4_text">T4</string>
 </resources>

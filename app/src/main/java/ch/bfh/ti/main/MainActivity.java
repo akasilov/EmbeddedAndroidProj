@@ -89,8 +89,8 @@ public class MainActivity extends AppCompatActivity {
     private int mUpdateInterval = 500;
 
     /* Variable for TextView widgets */
-    TextView textViewAmbientLight;
-    TextView dataReceived;
+    //TextView textViewAmbientLight;
+    //TextView dataReceived;
 
     Handler mButtonHandler;
 
@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
             if (activity != null) {
                 super.handleMessage(msg);
                 double luminance = msg.getData().getDouble("luminance");
-                activity.textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
+                //activity.textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
                 if (mqttHelper.isConnected()) {
                     try {
                         mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, String.valueOf((int)luminance));
@@ -160,12 +160,15 @@ public class MainActivity extends AppCompatActivity {
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_i2c);
-        getWindow().getDecorView().setBackgroundColor(Color.BLACK);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setIcon(R.drawable.logo_bfh);
 
-        textViewAmbientLight = findViewById(R.id.textViewAmbientLight);
-        dataReceived = findViewById(R.id.dataReceived);
-        textViewAmbientLight.setTextColor(Color.WHITE);
-        dataReceived.setTextColor(Color.WHITE);
+        //getWindow().getDecorView().setBackgroundColor(Color.BLACK);
+
+        //textViewAmbientLight = findViewById(R.id.textViewAmbientLight);
+        //dataReceived = findViewById(R.id.dataReceived);
+        //textViewAmbientLight.setTextColor(Color.WHITE);
+        //dataReceived.setTextColor(Color.WHITE);
 
         for (String ledId : ledIds) {
             gpio.unexport(ledId);
@@ -277,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                dataReceived.setText(text);
+                //dataReceived.setText(text);
             }
 
             @Override
