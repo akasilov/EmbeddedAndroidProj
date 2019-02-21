@@ -6,14 +6,13 @@
     android:layout_height="match_parent"
     tools:context="ch.bfh.ti.main.MainActivity">
 
-    <TableLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"
-        tools:layout_editor_absoluteX="8dp"
-        tools:layout_editor_absoluteY="8dp">
+        tools:layout_editor_absoluteX="54dp"
+        tools:layout_editor_absoluteY="97dp">
 
-        <TableRow
+        <android.support.constraint.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
@@ -21,114 +20,134 @@
                 android:id="@+id/leds_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:layout_weight="1"
                 android:text="@string/leds_string"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                tools:layout_editor_absoluteX="499dp"
-                tools:layout_editor_absoluteY="8dp" />
+                app:layout_constraintTop_toTopOf="parent"
+                tools:layout_editor_absoluteX="16dp" />
 
             <TextView
                 android:id="@+id/buttons_id"
                 android:layout_width="124dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="60dp"
+                android:layout_marginTop="8dp"
                 android:layout_weight="1"
                 android:text="@string/buttons_string"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                tools:layout_editor_absoluteX="501dp"
-                tools:layout_editor_absoluteY="8dp" />
+                app:layout_constraintStart_toEndOf="@+id/leds_id"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <TextView
                 android:id="@+id/lux_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="96dp"
+                android:layout_marginTop="8dp"
                 android:layout_weight="1"
                 android:text="@string/luminance_string"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                tools:layout_editor_absoluteX="488dp"
-                tools:layout_editor_absoluteY="8dp" />
-
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
+                app:layout_constraintStart_toEndOf="@+id/buttons_id"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <RadioButton
                 android:id="@+id/led1_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:checked="false"
                 android:clickable="true"
                 android:focusable="true"
-                android:text="@string/radiobutton_led1_string" />
-
-            <Switch
-                android:id="@+id/t1_id"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/t1_text"
-                android:textAlignment="viewEnd" />
-
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
+                android:text="@string/radiobutton_led1_string"
+                app:layout_constraintTop_toBottomOf="@+id/leds_id"
+                tools:layout_editor_absoluteX="16dp" />
 
             <RadioButton
                 android:id="@+id/led2_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/radiobutton_led2_string" />
-
-            <Switch
-                android:id="@+id/switch4"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/t2_text"
-                android:textAlignment="viewEnd" />
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" >
+                android:layout_marginTop="8dp"
+                android:text="@string/radiobutton_led2_string"
+                app:layout_constraintTop_toBottomOf="@+id/led1_id"
+                tools:layout_editor_absoluteX="16dp" />
 
             <RadioButton
                 android:id="@+id/led3_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/radiobutton_led3_string" />
-
-            <Switch
-                android:id="@+id/switch5"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/t3_text"
-                android:textAlignment="viewEnd" />
-
-        </TableRow>
-
-        <TableRow
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+                android:layout_marginTop="8dp"
+                android:text="@string/radiobutton_led3_string"
+                app:layout_constraintTop_toBottomOf="@+id/led2_id"
+                tools:layout_editor_absoluteX="16dp" />
 
             <RadioButton
                 android:id="@+id/led4_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/radiobutton_led4_string" />
+                android:layout_marginTop="8dp"
+                android:text="@string/radiobutton_led4_string"
+                app:layout_constraintTop_toBottomOf="@+id/led3_id"
+                tools:layout_editor_absoluteX="16dp" />
 
             <Switch
-                android:id="@+id/switch6"
+                android:id="@+id/t1_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/t4_text"
-                android:textAlignment="viewEnd" />
+                android:layout_marginStart="36dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/t1_text"
+                android:textAlignment="viewEnd"
+                app:layout_constraintStart_toEndOf="@+id/led1_id"
+                app:layout_constraintTop_toBottomOf="@+id/buttons_id" />
 
-        </TableRow>
-    </TableLayout>
+            <Switch
+                android:id="@+id/t2_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="36dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/t2_text"
+                android:textAlignment="viewEnd"
+                app:layout_constraintStart_toEndOf="@+id/led2_id"
+                app:layout_constraintTop_toBottomOf="@+id/t1_id" />
+
+            <Switch
+                android:id="@+id/t3_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="36dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/t3_text"
+                android:textAlignment="viewEnd"
+                app:layout_constraintStart_toEndOf="@+id/led3_id"
+                app:layout_constraintTop_toBottomOf="@+id/t2_id" />
+
+            <Switch
+                android:id="@+id/t4_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="36dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/t4_text"
+                android:textAlignment="viewEnd"
+                app:layout_constraintStart_toEndOf="@+id/led4_id"
+                app:layout_constraintTop_toBottomOf="@+id/t3_id" />
+
+            <view
+                class="com.jjoe64.graphview.GraphView"
+                id="@+id/view9"
+                android:layout_width="293dp"
+                android:layout_height="199dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                app:layout_constraintStart_toEndOf="@+id/t2_id"
+                app:layout_constraintTop_toBottomOf="@+id/lux_id" />
+        </android.support.constraint.ConstraintLayout>
+
+    </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>
