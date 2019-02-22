@@ -246,5 +246,4 @@ public class Buttons {
     {
         Log.i("debug()",String.format("ticks: %d, holdoff T1: %d, pressed event: %d, released event %d", debug_counter_UpdateThreadTicks.get(), debug_timer_Holdoff[0].get(), debug_counter_ButtonPressedEvents.get(), debug_counter_ButtonReleasedEvents.get()));
     }
-
 }

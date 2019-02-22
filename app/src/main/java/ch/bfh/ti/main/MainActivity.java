@@ -34,13 +34,11 @@
 package ch.bfh.ti.main;
 
 
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.TextView;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
@@ -55,6 +53,7 @@ import ch.bfh.ti.proj.R;
 import ch.bfh.ti.mqtt.MqttHelper;
 import ch.bfh.ti.gpio.SysfsFileGPIO;
 import ch.bfh.ti.gpio.Buttons;
+import ch.bfh.ti.adc.Poti;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -70,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String MQTT_TOPIC_LEDS ="firefly/leds/led";
     private static final String MQTT_TOPIC_LUMINANCE ="firefly/sensors/lux";
     private static final String MQTT_TOPIC_BUTTONS ="firefly/buttons/T";
+    private static final String MQTT_TOPIC_POTI ="firefly/poti";
 
     private static final String[] ledIds = {SysfsFileGPIO.LED_L1, SysfsFileGPIO.LED_L2,
                                             SysfsFileGPIO.LED_L3, SysfsFileGPIO.LED_L4};
@@ -85,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Buttons mButtons;
 
+    private Poti mPoti;
+
     /* Updare every second */
     private int mUpdateInterval = 500;
 
@@ -92,7 +94,9 @@ public class MainActivity extends AppCompatActivity {
     //TextView textViewAmbientLight;
     //TextView dataReceived;
 
-    Handler mButtonHandler;
+    private Handler mButtonHandler;
+
+    private Handler mPotiHandler;
 
     private Thread mLuminanceValueUpdaterThread = new Thread(new Runnable() {
         @Override
@@ -110,9 +114,7 @@ public class MainActivity extends AppCompatActivity {
                 catch (InterruptedException ex){
                     ex.printStackTrace();
                 }
-
                 //mButtons.debug();
-
             }
         }
     });
@@ -176,7 +178,10 @@ public class MainActivity extends AppCompatActivity {
             gpio.set_direction_out(ledId);
         }
 
+        /* MQTT */
+        startMqtt();
 
+        /* BUTTONS */
         mButtonHandler = new Handler();
         mButtons = new Buttons(gpio);
         mButtons.addButtonEventListener(new ButtonEventListener() {
@@ -215,9 +220,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Log.i("Thread onCreate:",Thread.currentThread().getName());
+        //Log.i("Thread onCreate:",Thread.currentThread().getName());
 
-        startMqtt();
+        /* POTI */
+        mPoti = new Poti();
+        mPoti.getAdcValue_adc();
+        mPotiHandler = new Handler();
+        mPotiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mqttHelper.isConnected()) {
+                    try {
+                        mqttHelper.sendMessage(MQTT_TOPIC_POTI, Integer.toString(mPoti.getAdcValue_adc()));
+                    } catch (MqttException ex) {
+                        System.err.println("Exception whilst publishing");
+                        ex.printStackTrace();
+                    }
+                }
+                mPotiHandler.postDelayed(this,200);
+                Log.i("MQTT","message sent");
+            }
+        });
+
 
 //        try {
 //            Log.d("Mqtt","Sending a message to topic " + MQTT_TOPIC_LUMINANCE + "=" +  String.valueOf((int)luminance));
