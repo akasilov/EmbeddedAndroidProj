@@ -138,6 +138,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/t3_id" />
 
             <view
+                android:id="@+id/graph_id"
                 class="com.jjoe64.graphview.GraphView"
                 id="@+id/view9"
                 android:layout_width="293dp"

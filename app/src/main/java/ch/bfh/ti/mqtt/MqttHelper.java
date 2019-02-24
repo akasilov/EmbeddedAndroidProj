@@ -20,7 +20,7 @@ public class MqttHelper {
     final String serverUri = "tcp://m24.cloudmqtt.com:17990";
 
     final String clientId = "ExampleAndroidClient";
-    final String subscriptionTopic = "firefly/leds/+";
+    final String subscriptionTopic = "firefly/#";
 
     final String username = "bhsssobh";
     final String password = "WJg22UK3NLDQ";

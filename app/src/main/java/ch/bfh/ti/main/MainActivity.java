@@ -1,36 +1,3 @@
-/*
- ***************************************************************************
- * \brief   Embedded Android I2C Exercise 5.2
- *          This sample program shows how to use the native I2C interface
- *	        Basic i2c communication with the the MAX44009 Ambient Light Sensor
- *          on the FireFly-BFH-Cape.
- *          Show the current Ambient Light in Lux on the display.
- *	        Only a minimal error handling is implemented.
- * \file    MainActivity.java
- * \version 1.0
- * \date    06.03.2014
- * \author  Martin Aebersold
- *
- * \remark  Last Modifications:
- * \remark  V1.0, AOM1, 06.03.2014
- ***************************************************************************
- *
- * Copyright (C) 2018 Martin Aebersold, Bern University of Applied Scinces
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 package ch.bfh.ti.main;
 
 
@@ -39,6 +6,16 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.RadioButton;
+import android.widget.Switch;
+
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.helper.DateAsXAxisLabelFormatter;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
@@ -46,6 +23,9 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.lang.ref.WeakReference;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import ch.bfh.ti.gpio.ButtonEventListener;
 import ch.bfh.ti.i2c.I2C;
@@ -90,13 +70,14 @@ public class MainActivity extends AppCompatActivity {
     /* Updare every second */
     private int mUpdateInterval = 500;
 
-    /* Variable for TextView widgets */
-    //TextView textViewAmbientLight;
-    //TextView dataReceived;
-
     private Handler mButtonHandler;
 
     private Handler mPotiHandler;
+
+    private Switch[] mButtonSwitches = {null,null,null,null};
+    private RadioButton[] mLedCheckBoxes = {null,null,null,null};
+
+    private LineGraphSeries<DataPoint> mGraphSeries;
 
     private Thread mLuminanceValueUpdaterThread = new Thread(new Runnable() {
         @Override
@@ -136,7 +117,9 @@ public class MainActivity extends AppCompatActivity {
             if (activity != null) {
                 super.handleMessage(msg);
                 double luminance = msg.getData().getDouble("luminance");
-                //activity.textViewAmbientLight.setText("Lux: " + String.format("%3.2f", luminance));
+
+                mGraphSeries.appendData(new DataPoint(new Date().getTime(), luminance), true, 100);
+
                 if (mqttHelper.isConnected()) {
                     try {
                         mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, String.valueOf((int)luminance));
@@ -148,6 +131,79 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    private class SwitchClickListner implements CompoundButton.OnClickListener {
+        public SwitchClickListner(int switchId) {
+            mSwitchId = switchId;
+        }
+
+        @Override
+        public void onClick(View v) {
+
+            boolean isChecked = ((Switch)v).isChecked();
+            gpio.write_value(ledIds[mSwitchId-1], isChecked ? '1': '0');
+
+            if (mqttHelper.isConnected()) {
+                try {
+                    mqttHelper.sendMessage(MQTT_TOPIC_BUTTONS + String.valueOf(mSwitchId), isChecked ? "1": "0");
+                } catch (MqttException ex) {
+                    System.err.println("Exception whilst publishing");
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        //private String mLed;
+        private int mSwitchId;
+    }
+
+    private class LedClickListner implements CompoundButton.OnClickListener {
+        public LedClickListner(int ledId) {
+            mLedId = ledId;
+        }
+
+        @Override
+        public void onClick(View v) {
+
+            boolean isChecked = ((RadioButton)v).isChecked();
+            if (mChecked == false) {
+                ((RadioButton)v).setChecked(true);
+                mChecked = true;
+            }
+            else if (mChecked == true) {
+                ((RadioButton)v).setChecked(false);
+                mChecked = false;
+            }
+
+
+            if (mqttHelper.isConnected()) {
+                try {
+                    mqttHelper.sendMessage(MQTT_TOPIC_LEDS + String.valueOf(mLedId), mChecked ? "1": "0");
+                } catch (MqttException ex) {
+                    System.err.println("Exception whilst publishing");
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        //private String mLed;
+        private int mLedId;
+        boolean mChecked = false;
+    }
+
+    private class SwitchCheckedListner implements CompoundButton.OnCheckedChangeListener {
+        public SwitchCheckedListner(RadioButton ledCheckbox) {
+            mLedCheckbox = ledCheckbox;
+        }
+
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+        {
+            mLedCheckbox.setChecked(isChecked);
+        }
+
+        RadioButton mLedCheckbox;
     }
 
     private final SensorDataHandler mSensorHandler = new SensorDataHandler(this);
@@ -165,17 +221,52 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setIcon(R.drawable.logo_bfh);
 
-        //getWindow().getDecorView().setBackgroundColor(Color.BLACK);
+        mButtonSwitches[0] = (Switch) findViewById(R.id.t1_id);
+        mButtonSwitches[1] = (Switch) findViewById(R.id.t2_id);
+        mButtonSwitches[2] = (Switch) findViewById(R.id.t3_id);
+        mButtonSwitches[3] = (Switch) findViewById(R.id.t4_id);
 
-        //textViewAmbientLight = findViewById(R.id.textViewAmbientLight);
-        //dataReceived = findViewById(R.id.dataReceived);
-        //textViewAmbientLight.setTextColor(Color.WHITE);
-        //dataReceived.setTextColor(Color.WHITE);
+        mLedCheckBoxes[0] = (RadioButton) findViewById(R.id.led1_id);
+        mLedCheckBoxes[1] = (RadioButton) findViewById(R.id.led2_id);
+        mLedCheckBoxes[2] = (RadioButton) findViewById(R.id.led3_id);
+        mLedCheckBoxes[3] = (RadioButton) findViewById(R.id.led4_id);
+
+        GraphView graph = (GraphView) findViewById(R.id.graph_id);
+        mGraphSeries = new LineGraphSeries<>();
+        graph.addSeries(mGraphSeries);
+
+        graph.getViewport().setXAxisBoundsManual(true);
+        graph.getViewport().setYAxisBoundsManual(true);
+        graph.getViewport().setMinY(0);
+        graph.getViewport().setMaxY(100);
+
+        // set date label formatter
+
+        graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(this, new SimpleDateFormat("HH:mm:ss")));
+        graph.getGridLabelRenderer().setNumHorizontalLabels(3);
+
+        Date d1 = new Date();
+        graph.getViewport().setMinX(d1.getTime());
+        graph.getViewport().setMaxX(d1.getTime() +  60000);
+
 
         for (String ledId : ledIds) {
             gpio.unexport(ledId);
             gpio.export(ledId);
             gpio.set_direction_out(ledId);
+        }
+
+        int index = 0;
+        for (Switch sw : mButtonSwitches) {
+            sw.setChecked(false);
+            sw.setOnClickListener(new SwitchClickListner(index + 1));
+            index++;
+        }
+        index = 0;
+        for (RadioButton cb : mLedCheckBoxes) {
+            cb.setChecked(false);
+            cb.setOnClickListener(new LedClickListner(index + 1));
+            index++;
         }
 
         /* MQTT */
@@ -241,16 +332,6 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("MQTT","message sent");
             }
         });
-
-
-//        try {
-//            Log.d("Mqtt","Sending a message to topic " + MQTT_TOPIC_LUMINANCE + "=" +  String.valueOf((int)luminance));
-//            int aa = (int)luminance;
-//            //mqttHelper.sendMessage(MQTT_TOPIC_LUMINANCE, "AAAAA");
-//        } catch (MqttException ex) {
-//            System.err.println("Exception whilst publishing");
-//            ex.printStackTrace();
-//        }
     }
 
     protected void onStop() {
@@ -300,11 +381,20 @@ public class MainActivity extends AppCompatActivity {
                     if (mqttMessage.toString().length() == 1 && ledId >= 0 && ledId < ledIds.length) {
                         char value = mqttMessage.toString().charAt(0);
                         Log.d("Mqtt", "Changing the LED" + String.valueOf(ledId));
+                        mLedCheckBoxes[ledId].setChecked(value == '1' ? true : false);
                         gpio.write_value(ledIds[ledId], value);
                     }
                 }
-
-                //dataReceived.setText(text);
+                if (topic.startsWith(MQTT_TOPIC_BUTTONS)) {
+                    int buttonId = Character.getNumericValue(topic.charAt(MQTT_TOPIC_BUTTONS.length()));
+                    --buttonId;
+                    if (mqttMessage.toString().length() == 1 && buttonId >= 0 && buttonId < mButtonSwitches.length) {
+                        char value = mqttMessage.toString().charAt(0);
+                        Log.d("Mqtt", "Changing the Button" + String.valueOf(buttonId));
+                        mButtonSwitches[buttonId].setChecked(value == '1' ? true : false);
+                        gpio.write_value(ledIds[buttonId], value);
+                    }
+                }
             }
 
             @Override
