@@ -7,6 +7,11 @@
 - Gerber Matthias
 ### Project name
 - Firefly Web Control
+### Project files
+- EmbeddedAndroidProj.tar.xz (Android Studio Project, Git: https://github.com/akasilov/EmbeddedAndroidProj)
+- EmbeddedAndroidNodeProj.tar.xz (Node-RED Project, Git: https://github.com/akasilov/EmbeddedAndroidNodeProj)
+### Date
+- 01. Feb 2018
 ### Used Frameworks, IDE's, ..
 - Android Studio (v3.3.1) 
 - Node-RED (v0.19.5), see https://nodered.org/
@@ -43,7 +48,7 @@ List of functions:
 ## How to install
 ### Android application
 Copy and unzip the Android Stuido Project file "EmbeddedAndroidProj.tar.xz" to a local folder.
-
+Check that there is an internet connection (ethernet, wlan, ..).
 ### Install web interface (Node-RED dashboard)
 Install node package manager:
 ``` $ sudo apt-get install npm ```
@@ -107,6 +112,7 @@ Clone "EmbeddedAndroidNodeProj" project:
     - The repository will be cloned into `~/.node-red/projects/`.
 - More information about projects: https://nodered.org/docs/user-guide/projects/
 
+Check that the Firefly-BFH-Cape is connected to the internet (ethernet or wlan). This is necessary in order to connect to the MQTT-Broker.
 ## Start application
 ### Start Android Studio Project
 
@@ -124,3 +130,4 @@ URL: `http://localhost:1880/ui/`
 
 Open Node-RED flow (application) in a browser if desired:
 URL: `http://localhost:1880/`
+
