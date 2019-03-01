@@ -11,7 +11,7 @@
 - EmbeddedAndroidProj.tar.xz (Android Studio Project, Git: https://github.com/akasilov/EmbeddedAndroidProj)
 - EmbeddedAndroidNodeProj.tar.xz (Node-RED Project, Git: https://github.com/akasilov/EmbeddedAndroidNodeProj)
 ### Date
-- 01. Feb 2018
+- February 2018
 ### Used Frameworks, IDE's, ..
 - Android Studio (v3.3.1) 
 - Node-RED (v0.19.5), see https://nodered.org/
